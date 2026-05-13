@@ -17,7 +17,9 @@ interface RegisterForm {
 export default function RegisterPage(): JSX.Element {
   const router = useRouter()
   const { notify } = useNotification()
-  const { register, handleSubmit, formState } = useForm<RegisterForm>()
+  const { register, handleSubmit, formState } = useForm<RegisterForm>({
+    defaultValues: { email: "", password: "", workspaceName: "" }
+  })
 
   async function onSubmit(values: RegisterForm): Promise<void> {
     const parsed = registerSchema.safeParse(values)

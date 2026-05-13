@@ -16,7 +16,9 @@ interface LoginForm {
 export default function LoginPage(): JSX.Element {
   const router = useRouter()
   const { notify } = useNotification()
-  const { register, handleSubmit, formState } = useForm<LoginForm>()
+  const { register, handleSubmit, formState } = useForm<LoginForm>({
+    defaultValues: { email: "", password: "" }
+  })
 
   async function onSubmit(values: LoginForm): Promise<void> {
     const parsed = loginSchema.safeParse(values)
