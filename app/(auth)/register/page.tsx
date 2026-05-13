@@ -2,59 +2,60 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useForm } from "react-hook-form"
+import { useState } from "react"
 import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
 import { registerSchema } from "@/lib/schema"
 import { useNotification } from "@/hooks/useNotification"
 
-interface RegisterForm {
-  email: string
-  password: string
-  workspaceName: string
-}
-
 export default function RegisterPage(): JSX.Element {
   const router = useRouter()
   const { notify } = useNotification()
-  const { register, handleSubmit, formState } = useForm<RegisterForm>({
-    defaultValues: { email: "", password: "", workspaceName: "" }
-  })
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [workspaceName, setWorkspaceName] = useState("")
+  const [submitting, setSubmitting] = useState(false)
 
-  async function onSubmit(values: RegisterForm): Promise<void> {
-    const parsed = registerSchema.safeParse(values)
+  async function onSubmit(e: React.FormEvent): Promise<void> {
+    e.preventDefault()
+    const parsed = registerSchema.safeParse({ email, password, workspaceName })
     if (!parsed.success) {
       notify(parsed.error.issues[0]?.message ?? "Check your entries", "error")
       return
     }
-    const controller = new AbortController()
-    const timer = window.setTimeout(() => controller.abort(), 8000)
-    const response = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(parsed.data),
-      signal: controller.signal
-    }).finally(() => window.clearTimeout(timer))
-    if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as { error?: string } | null
-      notify(payload?.error ?? "Registration failed", "error")
-      return
+    setSubmitting(true)
+    try {
+      const controller = new AbortController()
+      const timer = window.setTimeout(() => controller.abort(), 8000)
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(parsed.data),
+        signal: controller.signal
+      }).finally(() => window.clearTimeout(timer))
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null
+        notify(payload?.error ?? "Registration failed", "error")
+        return
+      }
+      router.push("/")
+      router.refresh()
+    } finally {
+      setSubmitting(false)
     }
-    router.push("/")
-    router.refresh()
   }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-neutral-900 px-4">
-      <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm space-y-5 rounded border border-neutral-800 bg-neutral-900 p-6">
+      <form onSubmit={onSubmit} className="w-full max-w-sm space-y-5 rounded border border-neutral-800 bg-neutral-900 p-6">
         <div>
           <h1 className="text-xl font-semibold">Create workspace</h1>
           <p className="mt-1 text-sm text-neutral-400">Start with one owner account and one workspace.</p>
         </div>
-        <label className="block text-sm text-neutral-300">Workspace name<Input className="mt-2" required {...register("workspaceName")} /></label>
-        <label className="block text-sm text-neutral-300">Email<Input className="mt-2" type="email" autoComplete="email" required {...register("email")} /></label>
-        <label className="block text-sm text-neutral-300">Password<Input className="mt-2" type="password" autoComplete="new-password" minLength={10} required {...register("password")} /></label>
-        <Button className="w-full" disabled={formState.isSubmitting}>Create account</Button>
+        <label className="block text-sm text-neutral-300">Workspace name<Input className="mt-2" required value={workspaceName} onChange={(e) => setWorkspaceName(e.target.value)} /></label>
+        <label className="block text-sm text-neutral-300">Email<Input className="mt-2" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+        <label className="block text-sm text-neutral-300">Password<Input className="mt-2" type="password" autoComplete="new-password" minLength={10} required value={password} onChange={(e) => setPassword(e.target.value)} /></label>
+        <Button className="w-full" disabled={submitting}>Create account</Button>
         <p className="text-center text-sm text-neutral-400">Already registered? <Link className="text-slate-300 hover:text-white" href="/login">Sign in</Link></p>
       </form>
     </main>
