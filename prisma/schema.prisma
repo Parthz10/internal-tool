@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String            @id @default(cuid())
+  email        String            @unique
+  passwordHash String
+  createdAt    DateTime          @default(now())
+  workspaces   WorkspaceMember[]
+}
+
+model Workspace {
+  id          String            @id @default(cuid())
+  name        String
+  slug        String            @unique
+  stripeCustomerId String?      @unique
+  createdAt   DateTime          @default(now())
+  members     WorkspaceMember[]
+  apps        App[]
+  dataSources DataSource[]
+}
+
+model WorkspaceMember {
+  userId      String
+  workspaceId String
+  role        String    @default("member")
+  user        User      @relation(fields: [userId], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@id([userId, workspaceId])
+}
+
+model App {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String
+  canvasJson  Json      @default("{\"blocks\":[],\"variables\":{}}")
+  published   Boolean   @default(false)
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([workspaceId, slug])
+}
+
+model DataSource {
+  id          String    @id @default(cuid())
+  name        String
+  type        String
+  config      Json
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  createdAt   DateTime  @default(now())
+}
